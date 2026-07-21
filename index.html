@@ -190,8 +190,13 @@
 
           <div v-else class="space-y-4">
             <div v-for="acc in accountBalances" :key="acc.name" class="space-y-1">
-              <div class="flex justify-between text-xs font-medium text-slate-700">
-                <span>{{ acc.name }}</span>
+              <div class="flex justify-between items-center text-xs font-medium text-slate-700">
+                <div class="flex items-center gap-1.5">
+                  <span>{{ acc.name }}</span>
+                  <span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-normal">
+                    {{ getPercentage(acc.balance) }}%
+                  </span>
+                </div>
                 <span :class="acc.balance >= 0 ? 'text-slate-800 font-bold' : 'text-rose-600 font-bold'">
                   ${{ acc.balance.toLocaleString() }}
                 </span>
@@ -237,8 +242,8 @@
   </div>
 
   <script>
-    // ⚠️ 請把引號內的網址換成你在 Google Apps Script 取得的「Web 應用程式 URL」
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHKg4fnuZvLtMptZVM8CPmZ1jZojvzlpxjDbVVz7M4YCLoD0tg7TcxIRGIV7naFG6z/exec';
+    // ⚠️ 記得將下面的 URL 替換成你的 Google Apps Script 部署網址（如果不小心覆蓋掉的話）
+    const GOOGLE_SCRIPT_URL = '貼上你的_Web_應用程式_URL';
 
     const { createApp, ref, computed, onMounted, watch } = Vue;
 
@@ -257,9 +262,8 @@
 
         const records = ref([]);
 
-        // 從 Google 雲端抓取資料
         const fetchCloudRecords = async () => {
-          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('貼上你剛才複製')) {
+          if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('貼上你的')) {
             alert('請先在 HTML 中設定你的 GOOGLE_SCRIPT_URL！');
             return;
           }
@@ -267,7 +271,7 @@
           try {
             const res = await fetch(GOOGLE_SCRIPT_URL);
             const data = await res.json();
-            records.value = data.reverse(); // 最新在最上面
+            records.value = data.reverse();
           } catch (err) {
             console.error('抓取雲端資料失敗:', err);
           } finally {
@@ -326,6 +330,12 @@
           });
         });
 
+        // 計算各帳戶占比 %
+        const getPercentage = (balance) => {
+          if (totalAmount.value <= 0 || balance <= 0) return 0;
+          return ((balance / totalAmount.value) * 100).toFixed(1);
+        };
+
         const maxBalance = computed(() => {
           const balances = accountBalances.value.map(a => Math.abs(a.balance));
           const max = Math.max(...balances, 0);
@@ -356,7 +366,6 @@
           }));
         });
 
-        // 新增資料到 Google 雲端
         const addRecord = async () => {
           const dateObj = new Date();
           const yearStr = dateObj.getFullYear();
@@ -381,7 +390,6 @@
               body: JSON.stringify(newRecord)
             });
 
-            // 本地優先更新顯示
             records.value.unshift({
               account: form.value.account,
               category: form.value.category,
@@ -398,7 +406,6 @@
           }
         };
 
-        // 從雲端刪除資料
         const deleteRecord = async (index) => {
           const target = records.value[index];
           loading.value = true;
@@ -426,6 +433,7 @@
           records,
           totalAmount,
           accountBalances,
+          getPercentage,
           monthlyWealth,
           getBarWidth,
           addAccount,
