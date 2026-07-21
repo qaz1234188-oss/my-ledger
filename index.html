@@ -156,7 +156,7 @@
             >
               <div class="space-y-0.5">
                 <div class="font-semibold text-slate-800">{{ item.account }}</div>
-                <div class="text-xs text-slate-500">{{ item.category }} · {{ item.date }}</div>
+                <div class="text-xs text-slate-500">{{ item.category }} · {{ formatDateYearMonth(item.date) }}</div>
               </div>
               <div class="flex items-center space-x-3">
                 <span :class="item.amount >= 0 ? 'text-emerald-600 font-bold' : 'text-rose-600 font-bold'">
@@ -193,7 +193,7 @@
               <div class="flex justify-between items-center text-xs font-medium text-slate-700">
                 <div class="flex items-center gap-1.5">
                   <span>{{ acc.name }}</span>
-                  <span class="text-[10px] bg-slate-200 text-slate-600 px-1.5 py-0.5 rounded-full font-normal">
+                  <span class="text-[10px] bg-indigo-100 text-indigo-700 px-1.5 py-0.5 rounded-full font-bold">
                     {{ getPercentage(acc.balance) }}%
                   </span>
                 </div>
@@ -242,8 +242,8 @@
   </div>
 
   <script>
-    // ⚠️ 記得將下面的 URL 替換成你的 Google Apps Script 部署網址（如果不小心覆蓋掉的話）
-    const GOOGLE_SCRIPT_URL = 'https://script.google.com/macros/s/AKfycbxHKg4fnuZvLtMptZVM8CPmZ1jZojvzlpxjDbVVz7M4YCLoD0tg7TcxIRGIV7naFG6z/exec';
+    // 記得將引號內改為你的 Google Web App URL
+    const GOOGLE_SCRIPT_URL = '貼上你的_Web_應用程式_URL';
 
     const { createApp, ref, computed, onMounted, watch } = Vue;
 
@@ -261,6 +261,20 @@
         });
 
         const records = ref([]);
+
+        // 安全解析並轉換為 YYYY/MM 格式
+        const formatDateYearMonth = (dateStr) => {
+          if (!dateStr) return '未知月份';
+          const d = new Date(dateStr);
+          if (isNaN(d.getTime())) {
+            // 如果字串已經包含 YYYY/MM 開頭，直接傳回
+            const match = String(dateStr).match(/\d{4}[\/-]\d{2}/);
+            return match ? match[0].replace('-', '/') : '未知月份';
+          }
+          const y = d.getFullYear();
+          const m = String(d.getMonth() + 1).padStart(2, '0');
+          return `${y}/${m}`;
+        };
 
         const fetchCloudRecords = async () => {
           if (!GOOGLE_SCRIPT_URL || GOOGLE_SCRIPT_URL.includes('貼上你的')) {
@@ -330,7 +344,6 @@
           });
         });
 
-        // 計算各帳戶占比 %
         const getPercentage = (balance) => {
           if (totalAmount.value <= 0 || balance <= 0) return 0;
           return ((balance / totalAmount.value) * 100).toFixed(1);
@@ -348,6 +361,7 @@
           return Math.min(Math.max(percentage, 5), 100);
         };
 
+        // 計算每個月底的累計總金額（確保顯示為 YYYY/MM）
         const monthlyWealth = computed(() => {
           if (records.value.length === 0) return [];
           const sorted = [...records.value].reverse();
@@ -356,7 +370,7 @@
 
           sorted.forEach(item => {
             runningTotal += Number(item.amount || 0);
-            const monthKey = item.date ? String(item.date).substring(0, 7) : '未知月份';
+            const monthKey = formatDateYearMonth(item.date);
             monthMap[monthKey] = runningTotal;
           });
 
@@ -441,7 +455,8 @@
           deleteAccount,
           addRecord,
           deleteRecord,
-          fetchCloudRecords
+          fetchCloudRecords,
+          formatDateYearMonth
         };
       }
     }).mount('#app');
